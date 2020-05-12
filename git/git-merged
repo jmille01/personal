@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+# Figure out, based on Change-Ids, which branches are have been merged into master.
+
+import sh
+
+def main():
+    branches = sh.git('for-each-ref', '--format=%(refname)', 'refs/heads')
+
+    master_changes = set()
+    for line in sh.git("--no-pager", "log", "master", _iter=True):
+        if 'Change-Id:' in line:
+            master_changes.add(line.strip())
+
+    merged = set()
+    not_merged = set()
+    for branch in branches:
+        branch = branch.strip()
+        for line in sh.git('--no-pager', 'log', '--max-count=1', branch, _iter=True):
+            if 'Change-Id:' in line:
+                change_id = line.strip()
+        if change_id in master_changes:
+            merged.add(branch)
+        else:
+            not_merged.add(branch)
+
+    print "merged:"
+    print "\n".join(merged)
+
+    print "not merged:"
+    print "\n".join(not_merged)
+
+
+if __name__ == "__main__":
+    main()
+

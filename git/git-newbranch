@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]; then
+    echo "Usage: git newbranch <name> <description>"
+    exit
+fi
+
+git branch $1
+git config branch.$1.description "$2"
+git checkout $1

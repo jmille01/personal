@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+import sh
+import os
+import textwrap
+
+def wrap(s, length):
+    while len(s) > length:
+        w = s[:length].rfind(' ')
+        yield s[:w]
+        s = s[w + 1:]
+    yield s
+
+def get_description(branch):
+    try:
+        return sh.git("config", "branch.{}.description".format(branch)).strip()
+    except sh.ErrorReturnCode:
+        return ''
+
+def format_branch(ref, current):
+    branch = ref.strip()[12:-1]
+    if branch == current:
+        branch = "* " + branch
+    return branch
+
+def main():
+    current = sh.git("rev-parse", "--abbrev-ref", "HEAD").strip()
+    branches = map(lambda ref: format_branch(ref, current), sh.git("for-each-ref", "--format='%(refname)'", "refs/heads/"))
+    branch_width = len(max(branches, key=len))
+
+    # for some reason "stty" doesn't work with "sh"
+    # ("Inappropriate ioctl for device")
+    rows, cols = os.popen('stty size', 'r').read().split()
+    terminal_width = int(cols)
+    desc_width = terminal_width - branch_width - 7
+
+    row_separator = "+-{}-+-{}-+".format('-' * branch_width, '-' * desc_width)
+
+    print row_separator
+    for b in branches:
+        for desc_line in wrap(get_description(b), desc_width):
+            print "| {} | {} |".format(b.ljust(branch_width), desc_line.ljust(desc_width))
+            b = ''
+        print row_separator
+
+if __name__ == '__main__':
+    main()
